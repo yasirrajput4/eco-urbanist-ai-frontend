@@ -1,0 +1,21 @@
+{
+  "name": "Eco-Urbanist AI",
+  "short_name": "Eco-Urbanist",
+  "description": "AI-powered urban greening visualization tool. Transform satellite images into green spaces.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "utilities", "education"],
+  "screenshots": []
+}
