@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Download,
@@ -44,6 +44,7 @@ const Results = () => {
   const [resultData, setResultData] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [savedToGallery, setSavedToGallery] = useState(false); // 🔧 NEW
+  const galleryItemSavedRef = useRef(false); // 🔧 FIX: prevent duplicate saves
 
   useEffect(() => {
     const { result, inputFile, fromGallery, galleryInputPreview } =
@@ -53,6 +54,9 @@ const Results = () => {
       navigate("/upload");
       return;
     }
+
+    // 🔧 FIX: Reset ref for new result
+    galleryItemSavedRef.current = false;
 
     setResultData(result);
 
@@ -81,6 +85,12 @@ const Results = () => {
 
   // 🔧 NEW: Save result to gallery
   const saveToGallery = (result, inputImagePreview) => {
+    // 🔧 FIX: prevent duplicate saves due to React StrictMode or re-renders
+    if (galleryItemSavedRef.current) {
+      return;
+    }
+    galleryItemSavedRef.current = true;
+
     try {
       const galleryItem = {
         inputImage: inputImagePreview,
