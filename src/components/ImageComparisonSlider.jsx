@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"; // 🔧 FIX: added useEffect for resize handling
+import { useState, useRef } from "react"; // 🔧 FIXED: Removed useEffect entirely
 import { MoveHorizontal } from "lucide-react";
 
 const ImageComparisonSlider = ({
@@ -9,25 +9,7 @@ const ImageComparisonSlider = ({
 }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
-  const [containerWidth, setContainerWidth] = useState(0); // 🔧 FIX: track container width in state
-  const containerRef = useRef(null);
-
-  // 🔧 FIX: containerRef.current is null on first render, so reading
-  // containerRef.current.offsetWidth directly during render always
-  // fell back to "100%" — which, combined with the clipped wrapper width
-  // (sliderPosition%), squished/scaled the "before" image incorrectly.
-  // Measuring after mount (and on resize) gives the real pixel width.
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, []);
+  const containerRef = useRef(null); // Ref is only used for click/drag calculations now
 
   const handleMove = (clientX) => {
     if (!containerRef.current) return;
@@ -71,7 +53,7 @@ const ImageComparisonSlider = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
       >
-        {/* After Image (Full Width) */}
+        {/* After Image (Full Width - Base Layer) */}
         <div className="relative w-full">
           <img
             src={afterImage}
@@ -84,22 +66,15 @@ const ImageComparisonSlider = ({
           </div>
         </div>
 
-        {/* Before Image (Clipped) */}
+        {/* Before Image (Clipped Layer via pure CSS clip-path) */}
         <div
-          className="absolute top-0 left-0 h-full overflow-hidden"
-          style={{ width: `${sliderPosition}%` }}
+          className="absolute inset-0 w-full h-full overflow-hidden"
+          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }} // 🔧 FIXED: No JS layout tracking needed!
         >
           <img
             src={beforeImage}
             alt={beforeLabel}
-            className="h-full object-cover block"
-            style={{
-              // 🔧 FIX: use measured pixel width from state instead of
-              // reading containerRef.current during render (which is null
-              // on first render and never updates afterwards)
-              width: containerWidth ? `${containerWidth}px` : "100%",
-              maxWidth: "none", // 🔧 FIX: prevent w-full/max-width clamping from shrinking the image back to the clipped wrapper's width
-            }}
+            className="w-full h-full object-cover block"
             draggable={false}
           />
           <div className="absolute top-6 left-6 bg-gradient-to-r from-gray-700 to-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-2xl border-2 border-white">
