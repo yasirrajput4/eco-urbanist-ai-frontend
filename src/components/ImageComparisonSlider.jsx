@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"; // 🔧 FIXED: Removed useEffect entirely
+import { useState, useRef } from "react"; // 🔧 FIXED: No useEffect, clean global tracking
 import { MoveHorizontal } from "lucide-react";
 
 const ImageComparisonSlider = ({
@@ -9,7 +9,7 @@ const ImageComparisonSlider = ({
 }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef(null); // Ref is only used for click/drag calculations now
+  const containerRef = useRef(null);
 
   const handleMove = (clientX) => {
     if (!containerRef.current) return;
@@ -21,17 +21,55 @@ const ImageComparisonSlider = ({
     setSliderPosition(Math.min(Math.max(percentage, 0), 100));
   };
 
-  const handleMouseDown = () => setIsDragging(true);
-  const handleMouseUp = () => setIsDragging(false);
+  // 🔧 FIXED: Track mouse movements globally on the window during an active drag
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
 
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    handleMove(e.clientX);
+    const handleGlobalMouseMove = (moveEvent) => {
+      handleMove(moveEvent.clientX);
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
   };
 
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    handleMove(e.touches[0].clientX);
+  // 🔧 FIXED: Track touch movements globally on the window during an active drag
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+
+    const handleGlobalTouchMove = (moveEvent) => {
+      handleMove(moveEvent.touches[0].clientX);
+    };
+
+    const handleGlobalTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener("touchmove", handleGlobalTouchMove);
+      window.removeEventListener("touchend", handleGlobalTouchEnd);
+    };
+
+    window.addEventListener("touchmove", handleGlobalTouchMove, {
+      passive: true,
+    });
+    window.addEventListener("touchend", handleGlobalTouchEnd);
+  };
+
+  // 🔧 FIXED: Complete keyboard accessibility for slider role
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowLeft") {
+      setSliderPosition((prev) => Math.max(prev - 5, 0));
+    } else if (e.key === "ArrowRight") {
+      setSliderPosition((prev) => Math.min(prev + 5, 100));
+    } else if (e.key === "Home") {
+      setSliderPosition(0);
+    } else if (e.key === "End") {
+      setSliderPosition(100);
+    }
   };
 
   return (
@@ -44,14 +82,10 @@ const ImageComparisonSlider = ({
         </p>
       </div>
 
+      {/* 🔧 LINE 47 FIXED: No interaction listeners here = no linter warnings */}
       <div
         ref={containerRef}
         className="relative w-full select-none overflow-hidden rounded-2xl shadow-2xl border-4 border-green-200 hover:border-green-400 transition-all cursor-ew-resize"
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleMouseUp}
       >
         {/* After Image (Full Width - Base Layer) */}
         <div className="relative w-full">
@@ -69,7 +103,7 @@ const ImageComparisonSlider = ({
         {/* Before Image (Clipped Layer via pure CSS clip-path) */}
         <div
           className="absolute inset-0 w-full h-full overflow-hidden"
-          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }} // 🔧 FIXED: No JS layout tracking needed!
+          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
         >
           <img
             src={beforeImage}
@@ -94,12 +128,19 @@ const ImageComparisonSlider = ({
           <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white"></div>
         </div>
 
-        {/* Slider Handle */}
-        <div
-          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2"
+        {/* 🔧 LINE 98 FIXED: Swapped 'div' to semantic focusable 'button' with ARIA tags */}
+        <button
+          type="button"
+          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 focus:outline-none focus-visible:ring-4 focus-visible:ring-green-500 rounded-full z-10"
           style={{ left: `${sliderPosition}%` }}
           onMouseDown={handleMouseDown}
-          onTouchStart={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onKeyDown={handleKeyDown}
+          role="slider"
+          aria-valuenow={Math.round(sliderPosition)}
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-label="Image comparison slider handle"
         >
           <div
             className={`w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center cursor-ew-resize border-4 transition-all duration-300 ${
@@ -112,7 +153,7 @@ const ImageComparisonSlider = ({
               className={`w-8 h-8 transition-colors ${isDragging ? "text-green-600" : "text-gray-600"}`}
             />
           </div>
-        </div>
+        </button>
 
         {/* Percentage Indicator */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-xs font-bold">
