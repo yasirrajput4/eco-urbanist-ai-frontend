@@ -84,6 +84,15 @@ function resultsReducer(state, action) {
   }
 }
 
+// ✅ FIXED: Micro layout loader component moved outside to prevent rebuilds on every render
+const chartLoader = (
+  <div className="h-[300px] flex items-center justify-center">
+    <div className="animate-pulse text-green-600 font-semibold text-sm">
+      Rendering analytical view...
+    </div>
+  </div>
+);
+
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -214,15 +223,6 @@ const Results = () => {
     { metric: "Water Retention", before: 35, after: 35 + improvement * 1.8 },
   ];
 
-  // Micro layout loader component for Chart Suspense
-  const chartLoader = (
-    <div className="h-[300px] flex items-center justify-center">
-      <div className="animate-pulse text-green-600 font-semibold text-sm">
-        Rendering analytical view...
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 py-16">
       <div className="container-custom max-w-7xl">
@@ -312,7 +312,6 @@ const Results = () => {
                 disabled={isDownloading}
                 className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-5 rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-black text-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {/* 🔧 FIXED: Replaced tacky loop animate-bounce with premium cubic-bezier micro-interaction */}
                 <Download className="w-6 h-6 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1" />
                 {isDownloading ? "Downloading..." : "Download Enhanced Image"}
               </button>
