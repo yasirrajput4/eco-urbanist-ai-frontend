@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useReducer, useRef, lazy, Suspense } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Download,
@@ -15,36 +15,84 @@ import {
   Wind,
   CheckCircle,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts";
 import api from "../services/api";
-import { getGreenScoreColor, getGreenScoreLabel } from "../utils/helpers";
 import ImageComparisonSlider from "../components/ImageComparisonSlider";
-import { galleryStorage } from "../utils/storage"; // 🔧 NEW
+import { galleryStorage } from "../utils/storage";
+
+// 🔧 Fixed 1: Performance - Lazy load Recharts to prevent eager heavy bundle loading
+const Recharts = lazy(() =>
+  import("recharts").then((mod) => ({
+    default: ({ children, type: ChartComponent, ...props }) => {
+      const Component = mod[ChartComponent];
+      return <Component {...props}>{children}</Component>;
+    },
+  })),
+);
+
+// Helper object to easily map strings to Recharts components inside Suspense wrapper
+const BarChart = (props) => <Recharts type="BarChart" {...props} />;
+const Bar = (props) => <Recharts type="Bar" {...props} />;
+const XAxis = (props) => <Recharts type="XAxis" {...props} />;
+const YAxis = (props) => <Recharts type="YAxis" {...props} />;
+const CartesianGrid = (props) => <Recharts type="CartesianGrid" {...props} />;
+const Tooltip = (props) => <Recharts type="Tooltip" {...props} />;
+const Legend = (props) => <Recharts type="Legend" {...props} />;
+const ResponsiveContainer = (props) => (
+  <Recharts type="ResponsiveContainer" {...props} />
+);
+const RadarChart = (props) => <Recharts type="RadarChart" {...props} />;
+const PolarGrid = (props) => <Recharts type="PolarGrid" {...props} />;
+const PolarAngleAxis = (props) => <Recharts type="PolarAngleAxis" {...props} />;
+const PolarRadiusAxis = (props) => (
+  <Recharts type="PolarRadiusAxis" {...props} />
+);
+const Radar = (props) => <Recharts type="Radar" {...props} />;
+
+// 🔧 Fixed 2: Bugs - Use useReducer to manage multiple related state variables and avoid sequential setStates
+const initialState = {
+  inputPreview: null,
+  outputUrl: null,
+  resultData: null,
+  isDownloading: false,
+  savedToGallery: false,
+};
+
+function resultsReducer(state, action) {
+  switch (action.type) {
+    case "SET_INITIAL_DATA":
+      return {
+        ...state,
+        resultData: action.payload.result,
+        outputUrl: action.payload.outputUrl,
+        savedToGallery: action.payload.savedToGallery,
+      };
+    case "SET_PREVIEW_AND_SAVE":
+      return {
+        ...state,
+        inputPreview: action.payload.preview,
+        savedToGallery: true,
+      };
+    case "SET_PREVIEW_ONLY":
+      return {
+        ...state,
+        inputPreview: action.payload.preview,
+      };
+    case "SET_DOWNLOADING":
+      return { ...state, isDownloading: action.payload };
+    default:
+      return state;
+  }
+}
 
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [inputPreview, setInputPreview] = useState(null);
-  const [outputUrl, setOutputUrl] = useState(null);
-  const [resultData, setResultData] = useState(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [savedToGallery, setSavedToGallery] = useState(false); // 🔧 NEW
-  const galleryItemSavedRef = useRef(false); // 🔧 FIX: prevent duplicate saves
+  const [state, dispatch] = useReducer(resultsReducer, initialState);
+  const { inputPreview, outputUrl, resultData, isDownloading, savedToGallery } =
+    state;
+
+  const galleryItemSavedRef = useRef(false);
 
   useEffect(() => {
     const { result, inputFile, fromGallery, galleryInputPreview } =
@@ -55,69 +103,67 @@ const Results = () => {
       return;
     }
 
-    // 🔧 FIX: Reset ref for new result
     galleryItemSavedRef.current = false;
 
-    setResultData(result);
-
+    let derivedOutputUrl = null;
     if (result.output_filename) {
-      setOutputUrl(api.getDownloadUrl(result.output_filename));
+      derivedOutputUrl = api.getDownloadUrl(result.output_filename);
     }
 
-    // 🔧 NEW: Handle input preview (from upload or gallery)
+    // Single unified dispatch to avoid multiple setState schedule cycles
+    dispatch({
+      type: "SET_INITIAL_DATA",
+      payload: {
+        result,
+        outputUrl: derivedOutputUrl,
+        savedToGallery: !!(fromGallery && galleryInputPreview),
+      },
+    });
+
     if (fromGallery && galleryInputPreview) {
-      // Viewing from gallery - use saved preview
-      setInputPreview(galleryInputPreview);
-      setSavedToGallery(true); // Already in gallery
+      dispatch({
+        type: "SET_PREVIEW_ONLY",
+        payload: { preview: galleryInputPreview },
+      });
     } else if (inputFile) {
-      // Fresh generation - read file and save to gallery
       const reader = new FileReader();
       reader.onload = (e) => {
         const preview = e.target.result;
-        setInputPreview(preview);
 
-        // 🔧 NEW: Auto-save to gallery
-        saveToGallery(result, preview);
+        // Auto-save logic wrapped cleanly
+        if (!galleryItemSavedRef.current) {
+          galleryItemSavedRef.current = true;
+          try {
+            const galleryItem = {
+              inputImage: preview,
+              outputFilename: result.output_filename,
+              greenScores: result.green_scores,
+              visualization: result.visualization,
+              metadata: result.metadata,
+            };
+            galleryStorage.add(galleryItem);
+            console.log("✅ Saved to gallery");
+            dispatch({ type: "SET_PREVIEW_AND_SAVE", payload: { preview } });
+          } catch (error) {
+            console.error("Failed to save to gallery:", error);
+            dispatch({ type: "SET_PREVIEW_ONLY", payload: { preview } });
+          }
+        }
       };
       reader.readAsDataURL(inputFile);
     }
   }, [location, navigate]);
 
-  // 🔧 NEW: Save result to gallery
-  const saveToGallery = (result, inputImagePreview) => {
-    // 🔧 FIX: prevent duplicate saves due to React StrictMode or re-renders
-    if (galleryItemSavedRef.current) {
-      return;
-    }
-    galleryItemSavedRef.current = true;
-
-    try {
-      const galleryItem = {
-        inputImage: inputImagePreview,
-        outputFilename: result.output_filename,
-        greenScores: result.green_scores,
-        visualization: result.visualization,
-        metadata: result.metadata,
-      };
-
-      galleryStorage.add(galleryItem);
-      setSavedToGallery(true);
-      console.log("✅ Saved to gallery");
-    } catch (error) {
-      console.error("Failed to save to gallery:", error);
-    }
-  };
-
   const handleDownload = async () => {
     if (resultData?.output_filename) {
-      setIsDownloading(true);
+      dispatch({ type: "SET_DOWNLOADING", payload: true });
       try {
         await api.downloadImage(resultData.output_filename);
       } catch (error) {
         console.error("Download failed:", error);
         alert("Failed to download image. Please try again.");
       } finally {
-        setIsDownloading(false);
+        dispatch({ type: "SET_DOWNLOADING", payload: false });
       }
     }
   };
@@ -146,24 +192,16 @@ const Results = () => {
     (greenScores.output?.green_pixels || 0) -
     (greenScores.input?.green_pixels || 0);
 
-  // Calculate environmental impact metrics
-  const co2Absorbed = (treesPlaced * 21).toFixed(1); // kg per year per tree
-  const oxygenProduced = (treesPlaced * 118).toFixed(0); // kg per year per tree
+  const co2Absorbed = (treesPlaced * 21).toFixed(1);
+  const oxygenProduced = (treesPlaced * 118).toFixed(0);
   const airQualityImprovement = Math.min((improvement * 2.5).toFixed(1), 100);
-  const temperatureReduction = (improvement * 0.15).toFixed(1); // °C reduction estimate
+  const temperatureReduction = (improvement * 0.15).toFixed(1);
 
   const chartData = [
-    {
-      name: "Before",
-      "Green Coverage": parseFloat(inputScore.toFixed(2)),
-    },
-    {
-      name: "After",
-      "Green Coverage": parseFloat(outputScore.toFixed(2)),
-    },
+    { name: "Before", "Green Coverage": parseFloat(inputScore.toFixed(2)) },
+    { name: "After", "Green Coverage": parseFloat(outputScore.toFixed(2)) },
   ];
 
-  // Environmental Impact Radar Chart Data
   const radarData = [
     { metric: "Green Coverage", before: inputScore, after: outputScore },
     {
@@ -175,6 +213,15 @@ const Results = () => {
     { metric: "Temperature", before: 60, after: 60 + improvement * 1.2 },
     { metric: "Water Retention", before: 35, after: 35 + improvement * 1.8 },
   ];
+
+  // Micro layout loader component for Chart Suspense
+  const chartLoader = (
+    <div className="h-[300px] flex items-center justify-center">
+      <div className="animate-pulse text-green-600 font-semibold text-sm">
+        Rendering analytical view...
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 py-16">
@@ -190,7 +237,6 @@ const Results = () => {
               Generate Another
             </Link>
 
-            {/* 🔧 NEW: Gallery saved indicator */}
             {savedToGallery && (
               <Link
                 to="/gallery"
@@ -259,8 +305,10 @@ const Results = () => {
             />
 
             {/* Download Button */}
+            {/* 🔧 Fixed 3: Bugs - Added type="button" to avoid generic fallback type */}
             <div className="mt-10 text-center">
               <button
+                type="button"
                 onClick={handleDownload}
                 disabled={isDownloading}
                 className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-5 rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-black text-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -272,9 +320,8 @@ const Results = () => {
           </div>
         )}
 
-        {/* Stats Cards - BIG NUMBERS */}
+        {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-8 mb-10">
-          {/* Improvement Card */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all transform hover:scale-105 border-4 border-green-200">
             <div className="flex items-center justify-between mb-4">
               <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-4 rounded-2xl shadow-lg">
@@ -297,7 +344,6 @@ const Results = () => {
             </p>
           </div>
 
-          {/* Green Pixels Card */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all transform hover:scale-105 border-4 border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-4 rounded-2xl shadow-lg">
@@ -318,7 +364,6 @@ const Results = () => {
             </p>
           </div>
 
-          {/* Trees Placed Card */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all transform hover:scale-105 border-4 border-emerald-200">
             <div className="flex items-center justify-between mb-4">
               <div className="bg-gradient-to-br from-emerald-400 to-emerald-500 p-4 rounded-2xl shadow-lg">
@@ -340,14 +385,13 @@ const Results = () => {
           </div>
         </div>
 
-        {/* 🔥 NEW FEATURE 1: Environmental Impact Cards */}
+        {/* Environmental Impact Cards */}
         <div className="mb-10">
           <h2 className="text-3xl font-black text-gray-900 mb-6 flex items-center">
             <Sparkles className="w-8 h-8 mr-3 text-green-600" />
             Environmental Impact Assessment
           </h2>
           <div className="grid md:grid-cols-4 gap-6">
-            {/* CO2 Absorption */}
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <Cloud className="w-10 h-10" />
@@ -364,7 +408,6 @@ const Results = () => {
               </p>
             </div>
 
-            {/* Oxygen Production */}
             <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <Wind className="w-10 h-10" />
@@ -381,7 +424,6 @@ const Results = () => {
               </p>
             </div>
 
-            {/* Air Quality */}
             <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <Droplets className="w-10 h-10" />
@@ -398,7 +440,6 @@ const Results = () => {
               <p className="text-xs opacity-75">Reduces PM2.5 particles</p>
             </div>
 
-            {/* Temperature Reduction */}
             <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <Sun className="w-10 h-10" />
@@ -419,50 +460,52 @@ const Results = () => {
 
         {/* Charts Section */}
         <div className="grid lg:grid-cols-2 gap-8 mb-10">
-          {/* Bar Chart */}
+          {/* Bar Chart inside Suspense */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
             <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center">
               <BarChart3 className="w-6 h-6 mr-3 text-green-600" />
               Coverage Comparison
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="name"
-                  stroke="#6b7280"
-                  style={{ fontWeight: "bold" }}
-                />
-                <YAxis stroke="#6b7280" style={{ fontWeight: "bold" }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border: "2px solid #22c55e",
-                    borderRadius: "12px",
-                    fontWeight: "bold",
-                  }}
-                  formatter={(value) => [`${value}%`, "Green Coverage"]}
-                />
-                <Legend wrapperStyle={{ fontWeight: "bold" }} />
-                <Bar
-                  dataKey="Green Coverage"
-                  fill="url(#greenGradient)"
-                  radius={[12, 12, 0, 0]}
-                />
-                <defs>
-                  <linearGradient
-                    id="greenGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor="#22c55e" />
-                    <stop offset="100%" stopColor="#16a34a" />
-                  </linearGradient>
-                </defs>
-              </BarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={chartLoader}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="#6b7280"
+                    style={{ fontWeight: "bold" }}
+                  />
+                  <YAxis stroke="#6b7280" style={{ fontWeight: "bold" }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "2px solid #22c55e",
+                      borderRadius: "12px",
+                      fontWeight: "bold",
+                    }}
+                    formatter={(value) => [`${value}%`, "Green Coverage"]}
+                  />
+                  <Legend wrapperStyle={{ fontWeight: "bold" }} />
+                  <Bar
+                    dataKey="Green Coverage"
+                    fill="url(#greenGradient)"
+                    radius={[12, 12, 0, 0]}
+                  />
+                  <defs>
+                    <linearGradient
+                      id="greenGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#22c55e" />
+                      <stop offset="100%" stopColor="#16a34a" />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
+            </Suspense>
             <div className="mt-6 text-center bg-green-50 py-4 rounded-xl">
               <p className="text-sm text-gray-600">
                 Total Improvement:{" "}
@@ -473,45 +516,47 @@ const Results = () => {
             </div>
           </div>
 
-          {/* 🔥 NEW FEATURE 2: Environmental Radar Chart */}
+          {/* Radar Chart inside Suspense */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
             <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center">
               <Sparkles className="w-6 h-6 mr-3 text-green-600" />
               Multi-Factor Impact Analysis
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis
-                  dataKey="metric"
-                  style={{ fontSize: "12px", fontWeight: "bold" }}
-                />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                <Radar
-                  name="Before"
-                  dataKey="before"
-                  stroke="#94a3b8"
-                  fill="#94a3b8"
-                  fillOpacity={0.3}
-                />
-                <Radar
-                  name="After"
-                  dataKey="after"
-                  stroke="#22c55e"
-                  fill="#22c55e"
-                  fillOpacity={0.5}
-                />
-                <Legend />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border: "2px solid #22c55e",
-                    borderRadius: "12px",
-                    fontWeight: "bold",
-                  }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={chartLoader}>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#e5e7eb" />
+                  <PolarAngleAxis
+                    dataKey="metric"
+                    style={{ fontSize: "12px", fontWeight: "bold" }}
+                  />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                  <Radar
+                    name="Before"
+                    dataKey="before"
+                    stroke="#94a3b8"
+                    fill="#94a3b8"
+                    fillOpacity={0.3}
+                  />
+                  <Radar
+                    name="After"
+                    dataKey="after"
+                    stroke="#22c55e"
+                    fill="#22c55e"
+                    fillOpacity={0.5}
+                  />
+                  <Legend />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "2px solid #22c55e",
+                      borderRadius: "12px",
+                      fontWeight: "bold",
+                    }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </Suspense>
             <div className="mt-4 text-center">
               <p className="text-xs text-gray-600 font-semibold">
                 Comprehensive environmental benefit assessment
@@ -520,7 +565,7 @@ const Results = () => {
           </div>
         </div>
 
-        {/* 🔥 NEW FEATURE 3: Tree Distribution with Icons */}
+        {/* Tree Distribution */}
         <div className="bg-white rounded-3xl shadow-xl p-8 mb-10">
           <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center">
             <TreePine className="w-6 h-6 mr-3 text-green-600" />
@@ -558,7 +603,7 @@ const Results = () => {
           </div>
         </div>
 
-        {/* 🔥 NEW FEATURE 4: Sustainability Score Card */}
+        {/* Sustainability Score Card */}
         <div className="bg-gradient-to-br from-green-600 via-emerald-600 to-green-700 rounded-3xl shadow-2xl p-10 mb-10 text-white">
           <div className="text-center mb-8">
             <h2 className="text-4xl font-black mb-3">
@@ -570,7 +615,6 @@ const Results = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {/* Overall Score */}
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center border-2 border-white/30">
               <p className="text-sm font-semibold mb-2 opacity-90">
                 Overall Score
@@ -581,7 +625,6 @@ const Results = () => {
               <p className="text-xs opacity-75">Out of 100</p>
             </div>
 
-            {/* Grade */}
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center border-2 border-white/30">
               <p className="text-sm font-semibold mb-2 opacity-90">
                 Sustainability Grade
@@ -600,7 +643,6 @@ const Results = () => {
               <p className="text-xs opacity-75">Excellent Rating</p>
             </div>
 
-            {/* Trees per Hectare (estimate) */}
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center border-2 border-white/30">
               <p className="text-sm font-semibold mb-2 opacity-90">
                 Tree Density
@@ -646,9 +688,7 @@ const Results = () => {
           <h3 className="text-2xl font-black text-gray-900 mb-6">
             Green Coverage Progress
           </h3>
-
           <div className="space-y-6">
-            {/* Before */}
             <div>
               <div className="flex justify-between text-sm mb-3">
                 <span className="text-gray-700 font-bold">Original Image</span>
@@ -664,7 +704,6 @@ const Results = () => {
               </div>
             </div>
 
-            {/* After */}
             <div>
               <div className="flex justify-between text-sm mb-3">
                 <span className="text-gray-700 font-bold">
