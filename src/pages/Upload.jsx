@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useReducer, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Upload as UploadIcon,
@@ -15,35 +15,128 @@ import {
 import api from "../services/api";
 import { validateImageFile, fileToDataUrl } from "../utils/helpers";
 
+// 1. Initial state for the entire component
+const initialState = {
+  file: null,
+  preview: null,
+  isDragging: false,
+  isProcessing: false,
+  error: null,
+  progress: 0,
+  statusMessage: "",
+};
+
+// 2. Reducer function to handle all state transitions cleanly
+const uploadReducer = (state, action) => {
+  switch (action.type) {
+    case "SET_DRAG_OVER":
+      return { ...state, isDragging: true };
+    case "SET_DRAG_LEAVE":
+      return { ...state, isDragging: false };
+    case "FILE_SELECT_SUCCESS":
+      return {
+        ...state,
+        file: action.payload.file,
+        preview: action.payload.preview,
+        error: null,
+      };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
+    case "REMOVE_FILE":
+      return {
+        ...initialState,
+      };
+    case "START_PROCESSING":
+      return {
+        ...state,
+        isProcessing: true,
+        error: null,
+        progress: 0,
+        statusMessage: "Initializing...",
+      };
+    case "INCREMENT_PROGRESS": {
+      if (state.progress >= 95) {
+        return {
+          ...state,
+          statusMessage: "🤖 AI is analyzing your image... Almost done!",
+        };
+      }
+      const nextProgress = state.progress + 1;
+      let message = state.statusMessage;
+
+      if (nextProgress <= 10) {
+        message = "📤 Uploading image to server...";
+      } else if (nextProgress <= 20) {
+        message = "🔍 Validating image format...";
+      } else if (nextProgress <= 35) {
+        message = "🌍 Detecting buildings and infrastructure...";
+      } else if (nextProgress <= 50) {
+        message = "🏜️ Analyzing terrain and surfaces...";
+      } else if (nextProgress <= 65) {
+        message = "🤖 AI model generating predictions...";
+      } else if (nextProgress <= 80) {
+        message = "🌳 Calculating optimal green space placement...";
+      } else if (nextProgress <= 90) {
+        message = "🎨 Applying green overlay and tree icons...";
+      } else {
+        message = "📊 Finalizing results and calculations...";
+      }
+
+      return {
+        ...state,
+        progress: nextProgress,
+        statusMessage: message,
+      };
+    }
+    case "PROCESSING_SUCCESS":
+      return {
+        ...state,
+        progress: 100,
+        statusMessage: "✅ Complete! Redirecting to results...",
+      };
+    case "PROCESSING_FINALLY":
+      return {
+        ...state,
+        isProcessing: false,
+      };
+    default:
+      return state;
+  }
+};
+
 const Upload = () => {
   const navigate = useNavigate();
-
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState("");
-
+  const [state, dispatch] = useReducer(uploadReducer, initialState);
   const isGeneratingRef = useRef(false);
 
+  // Destructure state values for clean usage in JSX
+  const {
+    file,
+    preview,
+    isDragging,
+    isProcessing,
+    error,
+    progress,
+    statusMessage,
+  } = state;
+
   const handleFileSelect = async (selectedFile) => {
-    setError(null);
+    dispatch({ type: "SET_ERROR", payload: null });
 
     const validation = validateImageFile(selectedFile);
     if (!validation.valid) {
-      setError(validation.error);
+      dispatch({ type: "SET_ERROR", payload: validation.error });
       return;
     }
 
-    setFile(selectedFile);
-
     try {
       const dataUrl = await fileToDataUrl(selectedFile);
-      setPreview(dataUrl);
+      dispatch({
+        type: "FILE_SELECT_SUCCESS",
+        payload: { file: selectedFile, preview: dataUrl },
+      });
     } catch (err) {
-      setError("Failed to generate preview");
+      dispatch({ type: "SET_ERROR", payload: "Failed to generate preview" });
       console.error(err);
     }
   };
@@ -57,17 +150,17 @@ const Upload = () => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    setIsDragging(true);
+    dispatch({ type: "SET_DRAG_OVER" });
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-    setIsDragging(false);
+    dispatch({ type: "SET_DRAG_LEAVE" });
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    setIsDragging(false);
+    dispatch({ type: "SET_DRAG_LEAVE" });
 
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
@@ -76,11 +169,7 @@ const Upload = () => {
   };
 
   const handleRemoveFile = () => {
-    setFile(null);
-    setPreview(null);
-    setError(null);
-    setProgress(0);
-    setStatusMessage("");
+    dispatch({ type: "REMOVE_FILE" });
     isGeneratingRef.current = false;
   };
 
@@ -91,7 +180,7 @@ const Upload = () => {
     }
 
     if (!file) {
-      setError("Please select an image first");
+      dispatch({ type: "SET_ERROR", payload: "Please select an image first" });
       return;
     }
 
@@ -101,70 +190,28 @@ const Upload = () => {
     }
 
     isGeneratingRef.current = true;
-    setIsProcessing(true);
-    setError(null);
-    setProgress(0);
-    setStatusMessage("Initializing...");
+    dispatch({ type: "START_PROCESSING" });
 
     let progressInterval = null;
 
     try {
-      // 🔧 SMOOTH PROGRESS SIMULATION - Updates every 300ms
+      // Smooth progress simulation running entirely through dispatch actions
       progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          // Cap at 95% until we get response
-          if (prev >= 95) {
-            setStatusMessage("🤖 AI is analyzing your image... Almost done!");
-            return prev;
-          }
-
-          // Smooth increment by 1%
-          const next = prev + 1;
-
-          // Update status messages based on progress
-          if (next <= 10) {
-            setStatusMessage("📤 Uploading image to server...");
-          } else if (next <= 20) {
-            setStatusMessage("🔍 Validating image format...");
-          } else if (next <= 35) {
-            setStatusMessage("🌍 Detecting buildings and infrastructure...");
-          } else if (next <= 50) {
-            setStatusMessage("🏜️ Analyzing terrain and surfaces...");
-          } else if (next <= 65) {
-            setStatusMessage("🤖 AI model generating predictions...");
-          } else if (next <= 80) {
-            setStatusMessage("🌳 Calculating optimal green space placement...");
-          } else if (next <= 90) {
-            setStatusMessage("🎨 Applying green overlay and tree icons...");
-          } else {
-            setStatusMessage("📊 Finalizing results and calculations...");
-          }
-
-          return next;
-        });
-      }, 300); // Update every 300ms for smooth animation
+        dispatch({ type: "INCREMENT_PROGRESS" });
+      }, 300);
 
       console.log("📡 Calling API to generate prediction...");
       const result = await api.generatePrediction(file);
 
-      // Clear interval when response arrives
       if (progressInterval) {
         clearInterval(progressInterval);
         progressInterval = null;
       }
 
-      // Jump to 100% when complete
-      setProgress(100);
-      setStatusMessage("✅ Complete! Redirecting to results...");
+      dispatch({ type: "PROCESSING_SUCCESS" });
 
       if (result.success) {
         console.log("✅ Success! Navigating to results...");
-
-        // 🔧 FIX: isGeneratingRef was never reset on the success path.
-        // If the user navigates back to /upload (e.g. browser back button)
-        // and selects/generates again, the top guard
-        // `if (isGeneratingRef.current) return;` would silently block
-        // every future generation attempt.
         isGeneratingRef.current = false;
 
         setTimeout(() => {
@@ -177,9 +224,10 @@ const Upload = () => {
           });
         }, 500);
       } else {
-        setError(result.error || "Generation failed. Please try again.");
-        setProgress(0);
-        setStatusMessage("");
+        dispatch({
+          type: "SET_ERROR",
+          payload: result.error || "Generation failed. Please try again.",
+        });
         isGeneratingRef.current = false;
       }
     } catch (err) {
@@ -190,46 +238,34 @@ const Upload = () => {
 
       console.error("❌ Prediction failed:", err);
 
-      // 🔧 BETTER ERROR HANDLING FOR MULTIPLE USERS
+      let errorMsg =
+        err.message || "An unexpected error occurred. Please try again.";
       if (err.response?.status === 503) {
-        setError(
-          "⏳ Server is busy processing another request. Please wait 30 seconds and try again.",
-        );
+        errorMsg =
+          "⏳ Server is busy processing another request. Please wait 30 seconds and try again.";
       } else if (err.response?.status === 400) {
         const errorData = err.response.data;
-        if (errorData.detail && typeof errorData.detail === "object") {
-          setError(
-            errorData.detail.message ||
-              "Invalid image type. Please use a satellite/aerial image.",
-          );
-        } else {
-          setError(
-            errorData.detail ||
-              "Invalid image. Please use a satellite/aerial image.",
-          );
-        }
+        errorMsg =
+          errorData.detail && typeof errorData.detail === "object"
+            ? errorData.detail.message ||
+              "Invalid image type. Please use a satellite/aerial image."
+            : errorData.detail ||
+              "Invalid image. Please use a satellite/aerial image.";
       } else if (
         err.code === "ECONNABORTED" ||
         err.message.includes("timeout")
       ) {
-        setError(
-          "⏱️ Request timeout. The server is taking too long. Please try again with a smaller image or wait a moment.",
-        );
+        errorMsg =
+          "⏱️ Request timeout. The server is taking too long. Please try again with a smaller image or wait a moment.";
       } else if (err.message === "Network Error") {
-        setError(
-          "🌐 Network error. The image might be too large. Please try a smaller image.",
-        );
-      } else {
-        setError(
-          err.message || "An unexpected error occurred. Please try again.",
-        );
+        errorMsg =
+          "🌐 Network error. The image might be too large. Please try a smaller image.";
       }
 
-      setProgress(0);
-      setStatusMessage("");
+      dispatch({ type: "SET_ERROR", payload: errorMsg });
       isGeneratingRef.current = false;
     } finally {
-      setIsProcessing(false);
+      dispatch({ type: "PROCESSING_FINALLY" });
     }
   };
 
@@ -260,7 +296,7 @@ const Upload = () => {
         {/* Upload Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-10 mb-10 border border-gray-100">
           {!file ? (
-            // Upload Zone - 🔧 ADDED "upload-zone" CLASS
+            /* Upload Zone */
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -311,7 +347,7 @@ const Upload = () => {
               </div>
             </div>
           ) : (
-            // Preview Zone
+            /* Preview Zone */
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -321,6 +357,7 @@ const Upload = () => {
                   </h3>
                 </div>
                 <button
+                  type="button" // 🔧 Added explicit type to fix React Doctor warning
                   onClick={handleRemoveFile}
                   className="p-3 hover:bg-red-50 rounded-xl transition-all duration-300 group"
                   disabled={isProcessing}
@@ -365,7 +402,7 @@ const Upload = () => {
             </div>
           )}
 
-          {/* Progress Bar - ENHANCED */}
+          {/* Progress Bar */}
           {isProcessing && (
             <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-between mb-3">
@@ -382,7 +419,6 @@ const Upload = () => {
                   className="bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 h-full transition-all duration-300 ease-out shadow-lg relative overflow-hidden"
                   style={{ width: `${progress}%` }}
                 >
-                  {/* Animated shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                 </div>
               </div>
@@ -402,9 +438,10 @@ const Upload = () => {
             </div>
           )}
 
-          {/* Generate Button - 🔧 ADDED "generate-button" CLASS */}
+          {/* Generate Button */}
           {file && !isProcessing && (
             <button
+              type="button" // 🔧 Added explicit type to fix React Doctor warning
               onClick={handleGenerate}
               disabled={isProcessing}
               className="generate-button w-full mt-8 group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-5 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-black text-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -450,7 +487,6 @@ const Upload = () => {
         </div>
       </div>
 
-      {/* Add shimmer animation CSS */}
       <style>{`
         @keyframes shimmer {
           0% { transform: translateX(-100%); }
