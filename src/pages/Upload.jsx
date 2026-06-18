@@ -104,6 +104,11 @@ const uploadReducer = (state, action) => {
   }
 };
 
+// 3. Pure helper functions outside the component scope to avoid rebuilds on render
+const handleBrowseClick = () => {
+  document.getElementById("fileInput")?.click();
+};
+
 const Upload = () => {
   const navigate = useNavigate();
   const [state, dispatch] = useReducer(uploadReducer, initialState);
@@ -269,10 +274,6 @@ const Upload = () => {
     }
   };
 
-  const handleBrowseClick = () => {
-    document.getElementById("fileInput")?.click();
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 py-16">
       <div className="container-custom max-w-5xl">
@@ -357,7 +358,7 @@ const Upload = () => {
                   </h3>
                 </div>
                 <button
-                  type="button" // 🔧 Added explicit type to fix React Doctor warning
+                  type="button"
                   onClick={handleRemoveFile}
                   className="p-3 hover:bg-red-50 rounded-xl transition-all duration-300 group"
                   disabled={isProcessing}
@@ -441,7 +442,7 @@ const Upload = () => {
           {/* Generate Button */}
           {file && !isProcessing && (
             <button
-              type="button" // 🔧 Added explicit type to fix React Doctor warning
+              type="button"
               onClick={handleGenerate}
               disabled={isProcessing}
               className="generate-button w-full mt-8 group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-5 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-black text-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"

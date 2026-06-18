@@ -28,7 +28,7 @@ const Footer = () => {
   return (
     <footer className="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-gray-300 border-t-4 border-green-500 relative overflow-hidden">
       {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-green-500 rounded-full blur-3xl animate-pulse"></div>
         <div
           className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-500 rounded-full blur-3xl animate-pulse"
@@ -358,7 +358,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://github.com/anaskazi-dev-mind/Eco-Urbanist-AI/issues"
+                  href="https://github.com/anaskazi-dev-mind/Eco-Urbanist-AI/images"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-center hover:text-green-400 transition-all font-semibold text-gray-400"
@@ -409,7 +409,7 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* 🔧 NEW: Real Project Highlights (No Fake Stats) */}
+        {/* Real Project Highlights */}
         <div className="mt-14 pt-10 border-t border-gray-800">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 hover:bg-gray-800 transition-all transform hover:scale-110 hover:-translate-y-2 border-2 border-gray-700 hover:border-green-500 shadow-lg hover:shadow-green-500/30">
@@ -470,7 +470,8 @@ const Footer = () => {
                   Anas Kazi & Team
                 </a>
               </p>
-              <span className="text-gray-500 text-xs bg-purple-500/10 border border-purple-500/30 px-3 py-1 rounded-full font-bold">
+              {/* 🔧 FIXED: Changed text-gray-500 to text-purple-300 for premium contrast & accessibility */}
+              <span className="text-purple-300 text-xs bg-purple-500/10 border border-purple-500/30 px-3 py-1 rounded-full font-bold">
                 🎓 Academic Project
               </span>
             </div>
@@ -478,7 +479,8 @@ const Footer = () => {
 
           {/* Tech Stack Badges */}
           <div className="text-center">
-            <p className="text-xs text-gray-600 mb-4 font-black uppercase tracking-widest flex items-center justify-center gap-2">
+            {/* 🔧 FIXED: Changed text-gray-600 to text-gray-400 for dark mode clarity */}
+            <p className="text-xs text-gray-400 mb-4 font-black uppercase tracking-widest flex items-center justify-center gap-2">
               <Rocket className="w-4 h-4 text-green-500" />
               Powered by Modern Technologies
             </p>
