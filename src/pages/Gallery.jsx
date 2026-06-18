@@ -1,14 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react"; // 🔧 Fixed: Added useMemo, removed useEffect
 import { Link } from "react-router-dom";
 import {
   Image as ImageIcon,
   Search,
-  Filter,
   SortDesc,
   Trash2,
   TrendingUp,
   TreePine,
-  Calendar,
   AlertCircle,
   Upload as UploadIcon,
 } from "lucide-react";
@@ -16,34 +14,15 @@ import { galleryStorage } from "../utils/storage";
 import GalleryCard from "../components/GalleryCard";
 
 const Gallery = () => {
-  const [gallery, setGallery] = useState([]);
-  const [filteredGallery, setFilteredGallery] = useState([]);
+  // 🔧 Fixed: Initialize state directly from storage on mount instead of an empty mount useEffect
+  const [gallery, setGallery] = useState(() => galleryStorage.getAll());
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // newest, oldest, improvement, trees
-  const [stats, setStats] = useState({
-    totalImages: 0,
-    averageImprovement: 0,
-    totalTreesPlanted: 0,
-  });
 
-  // Load gallery on mount
-  useEffect(() => {
-    loadGallery();
-  }, []);
+  const [stats, setStats] = useState(() => galleryStorage.getStats());
 
-  // Filter and sort when data changes
-  useEffect(() => {
-    filterAndSortGallery();
-  }, [gallery, searchTerm, sortBy]);
-
-  const loadGallery = () => {
-    const data = galleryStorage.getAll();
-    const galleryStats = galleryStorage.getStats();
-    setGallery(data);
-    setStats(galleryStats);
-  };
-
-  const filterAndSortGallery = () => {
+  // 🔧 Fixed: Instead of copying derived values to state with useEffect, compute them with useMemo
+  const filteredGallery = useMemo(() => {
     let filtered = [...gallery];
 
     // Search filter
@@ -76,7 +55,14 @@ const Gallery = () => {
       }
     });
 
-    setFilteredGallery(filtered);
+    return filtered;
+  }, [gallery, searchTerm, sortBy]); // Complete dependencies track
+
+  const loadGallery = () => {
+    const data = galleryStorage.getAll();
+    const galleryStats = galleryStorage.getStats();
+    setGallery(data);
+    setStats(galleryStats);
   };
 
   const handleDelete = (id) => {
@@ -202,9 +188,12 @@ const Gallery = () => {
             </div>
 
             {/* Clear All */}
+            {/* 🔧 Fixed: Added type="button" and aria-label for accessibility */}
             <button
+              type="button"
               onClick={handleClearAll}
               disabled={gallery.length === 0}
+              aria-label="Delete all saved gallery entries"
               className="flex items-center justify-center gap-2 bg-red-500 text-white px-6 py-3 rounded-xl hover:bg-red-600 transition-all duration-300 font-bold shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
             >
               <Trash2 className="w-5 h-5" />
@@ -255,7 +244,9 @@ const Gallery = () => {
                   No images match your search criteria. Try a different search
                   term.
                 </p>
+                {/* 🔧 Fixed: Changed static click to a real button element with type="button" */}
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="text-green-600 font-bold hover:text-green-700 transition-colors"
                 >
