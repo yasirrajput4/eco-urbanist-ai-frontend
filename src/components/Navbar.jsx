@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Leaf, Sparkles, Image as ImageIcon } from "lucide-react"; // 🔧 Added ImageIcon
+import { Menu, X, Leaf, Sparkles, Image as ImageIcon } from "lucide-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +46,7 @@ const Navbar = () => {
             >
               Upload
             </Link>
-            {/* 🔧 NEW: Gallery Link */}
+            {/* Gallery Link */}
             <Link
               to="/gallery"
               className={`px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 ${
@@ -69,6 +69,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
+            type="button"
             onClick={toggleMenu}
             className="md:hidden p-3 rounded-xl hover:bg-gray-100 transition-all duration-300 transform active:scale-95"
           >
@@ -106,7 +107,7 @@ const Navbar = () => {
               >
                 Upload
               </Link>
-              {/* 🔧 NEW: Gallery Link Mobile */}
+              {/* Gallery Link Mobile */}
               <Link
                 to="/gallery"
                 onClick={toggleMenu}
