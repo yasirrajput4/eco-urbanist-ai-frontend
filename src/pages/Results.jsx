@@ -305,7 +305,6 @@ const Results = () => {
             />
 
             {/* Download Button */}
-            {/* 🔧 Fixed 3: Bugs - Added type="button" to avoid generic fallback type */}
             <div className="mt-10 text-center">
               <button
                 type="button"
@@ -313,7 +312,8 @@ const Results = () => {
                 disabled={isDownloading}
                 className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-5 rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-black text-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-6 h-6 group-hover:animate-bounce" />
+                {/* 🔧 FIXED: Replaced tacky loop animate-bounce with premium cubic-bezier micro-interaction */}
+                <Download className="w-6 h-6 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1" />
                 {isDownloading ? "Downloading..." : "Download Enhanced Image"}
               </button>
             </div>

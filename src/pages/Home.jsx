@@ -12,26 +12,33 @@ import {
 } from "lucide-react";
 
 const Home = () => {
-  // Scroll animation state
   const [isVisible, setIsVisible] = useState({});
   const sectionRefs = useRef([]);
 
   useEffect(() => {
-    const observers = sectionRefs.current.map((ref, index) => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
+    // 1. Create a SINGLE observer instance
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
+            const index = entry.target.getAttribute("data-index");
             setIsVisible((prev) => ({ ...prev, [index]: true }));
-          }
-        },
-        { threshold: 0.1 },
-      );
 
+            // Optional: Stop observing once it has animated in
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+
+    // 2. Observe all elements currently in our ref array
+    sectionRefs.current.forEach((ref) => {
       if (ref) observer.observe(ref);
-      return observer;
     });
 
-    return () => observers.forEach((observer) => observer.disconnect());
+    // 3. Clean up the single observer on unmount
+    return () => observer.disconnect();
   }, []);
 
   const addToRefs = (el) => {
@@ -41,11 +48,11 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Hero Section */}
       <Hero />
 
-      {/* Stats Bar - ANIMATED */}
+      {/* Stats Bar */}
       <section className="py-12 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 animate-gradient-x">
         <div className="container-custom">
           <div className="grid md:grid-cols-3 gap-8 text-center text-white">
@@ -87,6 +94,7 @@ const Home = () => {
         <div className="container-custom">
           <div
             ref={addToRefs}
+            data-index="0"
             className={`text-center mb-16 transition-all duration-1000 ${
               isVisible[0]
                 ? "opacity-100 translate-y-0"
@@ -102,9 +110,10 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 - CRAZY HOVER */}
+            {/* Step 1 */}
             <div
               ref={addToRefs}
+              data-index="1"
               className={`text-center bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl transition-all duration-500 transform hover:scale-110 hover:bg-gradient-to-br hover:from-yellow-100 hover:to-orange-100 hover:shadow-2xl hover:rotate-2 cursor-pointer border-4 border-transparent hover:border-yellow-400 ${
                 isVisible[1]
                   ? "opacity-100 translate-y-0"
@@ -123,9 +132,10 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Step 2 - CRAZY HOVER */}
+            {/* Step 2 */}
             <div
               ref={addToRefs}
+              data-index="2"
               className={`text-center bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl transition-all duration-500 transform hover:scale-110 hover:bg-gradient-to-br hover:from-blue-100 hover:to-purple-100 hover:shadow-2xl hover:-rotate-2 cursor-pointer border-4 border-transparent hover:border-blue-400 delay-100 ${
                 isVisible[2]
                   ? "opacity-100 translate-y-0"
@@ -144,9 +154,10 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Step 3 - CRAZY HOVER */}
+            {/* Step 3 */}
             <div
               ref={addToRefs}
+              data-index="3"
               className={`text-center bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl transition-all duration-500 transform hover:scale-110 hover:bg-gradient-to-br hover:from-pink-100 hover:to-red-100 hover:shadow-2xl hover:rotate-2 cursor-pointer border-4 border-transparent hover:border-pink-400 delay-200 ${
                 isVisible[3]
                   ? "opacity-100 translate-y-0"
@@ -173,6 +184,7 @@ const Home = () => {
         <div className="container-custom">
           <div
             ref={addToRefs}
+            data-index="4"
             className={`text-center mb-16 transition-all duration-1000 ${
               isVisible[4]
                 ? "opacity-100 translate-y-0"
@@ -188,9 +200,10 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1 - EXPLOSIVE HOVER */}
+            {/* Feature 1 */}
             <div
               ref={addToRefs}
+              data-index="5"
               className={`bg-white p-6 rounded-2xl shadow-lg border-4 border-transparent hover:border-yellow-400 hover:shadow-2xl transform hover:scale-110 hover:-rotate-3 transition-all duration-500 cursor-pointer hover:bg-gradient-to-br hover:from-yellow-50 hover:to-orange-50 ${
                 isVisible[5]
                   ? "opacity-100 translate-y-0"
@@ -208,9 +221,10 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Feature 2 - EXPLOSIVE HOVER */}
+            {/* Feature 2 */}
             <div
               ref={addToRefs}
+              data-index="6"
               className={`bg-white p-6 rounded-2xl shadow-lg border-4 border-transparent hover:border-blue-400 hover:shadow-2xl transform hover:scale-110 hover:rotate-3 transition-all duration-500 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 delay-100 ${
                 isVisible[6]
                   ? "opacity-100 translate-y-0"
@@ -228,9 +242,10 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Feature 3 - EXPLOSIVE HOVER */}
+            {/* Feature 3 */}
             <div
               ref={addToRefs}
+              data-index="7"
               className={`bg-white p-6 rounded-2xl shadow-lg border-4 border-transparent hover:border-purple-400 hover:shadow-2xl transform hover:scale-110 hover:-rotate-3 transition-all duration-500 cursor-pointer hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 delay-200 ${
                 isVisible[7]
                   ? "opacity-100 translate-y-0"
@@ -248,9 +263,10 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Feature 4 - EXPLOSIVE HOVER */}
+            {/* Feature 4 */}
             <div
               ref={addToRefs}
+              data-index="8"
               className={`bg-white p-6 rounded-2xl shadow-lg border-4 border-transparent hover:border-orange-400 hover:shadow-2xl transform hover:scale-110 hover:rotate-3 transition-all duration-500 cursor-pointer hover:bg-gradient-to-br hover:from-orange-50 hover:to-red-50 delay-300 ${
                 isVisible[8]
                   ? "opacity-100 translate-y-0"
@@ -271,9 +287,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section - MEGA BUTTON */}
+      {/* CTA Section */}
       <section className="py-24 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 relative overflow-hidden">
-        {/* Crazy animated background */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-yellow-300 rounded-full blur-3xl opacity-20 animate-pulse"></div>
           <div
@@ -291,7 +306,6 @@ const Home = () => {
             Start visualizing sustainable urban development today
           </p>
 
-          {/* MEGA CRAZY BUTTON */}
           <a
             href="/upload"
             className="group inline-flex items-center gap-3 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 text-gray-900 px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl hover:shadow-yellow-400 transition-all duration-500 transform hover:scale-125 hover:rotate-3 border-8 border-white hover:border-yellow-200 animate-bounce hover:animate-none"
