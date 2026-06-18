@@ -16,15 +16,12 @@ const Home = () => {
   const sectionRefs = useRef([]);
 
   useEffect(() => {
-    // 1. Create a SINGLE observer instance
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const index = entry.target.getAttribute("data-index");
             setIsVisible((prev) => ({ ...prev, [index]: true }));
-
-            // Optional: Stop observing once it has animated in
             observer.unobserve(entry.target);
           }
         });
@@ -32,12 +29,10 @@ const Home = () => {
       { threshold: 0.1 },
     );
 
-    // 2. Observe all elements currently in our ref array
     sectionRefs.current.forEach((ref) => {
       if (ref) observer.observe(ref);
     });
 
-    // 3. Clean up the single observer on unmount
     return () => observer.disconnect();
   }, []);
 
@@ -56,9 +51,11 @@ const Home = () => {
       <section className="py-12 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 animate-gradient-x">
         <div className="container-custom">
           <div className="grid md:grid-cols-3 gap-8 text-center text-white">
-            <div className="transform hover:scale-125 transition-all duration-500 hover:rotate-3 cursor-pointer">
+            {/* Added 'group' to handle smooth micro-interactions inside */}
+            <div className="group transform hover:scale-125 transition-all duration-500 hover:rotate-3 cursor-pointer">
               <div className="flex items-center justify-center mb-2">
-                <TrendingUp className="w-8 h-8 mr-2 animate-bounce" />
+                {/* Fixed: Replaced bounce with smooth ease-out lift on hover */}
+                <TrendingUp className="w-8 h-8 mr-2 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-2" />
                 <p className="text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-yellow-200">
                   1000+
                 </p>
@@ -76,9 +73,11 @@ const Home = () => {
                 Avg. Green Coverage Boost
               </p>
             </div>
-            <div className="transform hover:scale-125 transition-all duration-500 hover:rotate-3 cursor-pointer">
+            {/* Added 'group' for smooth inner transform */}
+            <div className="group transform hover:scale-125 transition-all duration-500 hover:rotate-3 cursor-pointer">
               <div className="flex items-center justify-center mb-2">
-                <Lock className="w-8 h-8 mr-2 animate-bounce" />
+                {/* Fixed: Replaced bounce with smooth ease-out lift */}
+                <Lock className="w-8 h-8 mr-2 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-2" />
                 <p className="text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-yellow-200">
                   100%
                 </p>
@@ -295,7 +294,8 @@ const Home = () => {
             className="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl opacity-20 animate-pulse"
             style={{ animationDelay: "1s" }}
           ></div>
-          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-300 rounded-full blur-3xl opacity-20 animate-bounce"></div>
+          {/* Fixed: Changed background blur layer from bounce to a lighter performance-friendly pulse */}
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-300 rounded-full blur-3xl opacity-20 animate-pulse"></div>
         </div>
 
         <div className="container-custom text-center relative z-10">
@@ -306,19 +306,18 @@ const Home = () => {
             Start visualizing sustainable urban development today
           </p>
 
+          {/* Fixed: Replaced bounce with smooth cubic-bezier micro-interaction on hover */}
           <a
             href="/upload"
-            className="group inline-flex items-center gap-3 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 text-gray-900 px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl hover:shadow-yellow-400 transition-all duration-500 transform hover:scale-125 hover:rotate-3 border-8 border-white hover:border-yellow-200 animate-bounce hover:animate-none"
+            className="group inline-flex items-center gap-3 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 text-gray-900 px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl hover:shadow-yellow-400 border-8 border-white hover:border-yellow-200 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform hover:scale-125 hover:-translate-y-2 hover:rotate-3"
           >
             <Sparkles className="w-8 h-8 animate-spin" />
             <span className="relative z-10">🚀 GET STARTED NOW</span>
-            <ArrowRight className="w-8 h-8 relative z-10 group-hover:translate-x-3 transition-transform duration-300 animate-pulse" />
+            <ArrowRight className="w-8 h-8 relative z-10 group-hover:translate-x-3 transition-transform duration-300" />
           </a>
 
-          <p
-            className="text-white mt-8 text-lg font-bold animate-bounce"
-            style={{ animationDelay: "0.5s" }}
-          >
+          {/* Fixed: Removed continuous small text bounce for a premium steady look */}
+          <p className="text-white mt-8 text-lg font-bold opacity-90">
             ✨ No signup • Free forever • Start in 30 seconds ✨
           </p>
         </div>

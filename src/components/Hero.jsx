@@ -6,13 +6,12 @@ import {
   Leaf,
   TrendingUp,
   Shield,
-  Image as ImageIcon, // Imported for consistency
+  Image as ImageIcon,
 } from "lucide-react";
 
 const Hero = () => {
   return (
     <div className="relative bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 overflow-hidden min-h-screen flex items-center py-12 lg:py-0">
-      {/* Subtle animated background */}
       <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-green-300 rounded-full blur-3xl animate-pulse"></div>
         <div
@@ -25,7 +24,6 @@ const Hero = () => {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* LEFT: Content */}
           <div className="space-y-6 sm:space-y-8 text-left">
-            {/* Badge */}
             <div className="inline-flex items-center bg-white shadow-md border border-green-200 px-5 py-2.5 rounded-full hover:shadow-lg transition-shadow select-none">
               <Sparkles className="w-4 h-4 mr-2 text-green-600" />
               <span className="text-sm font-bold text-green-700">
@@ -33,21 +31,18 @@ const Hero = () => {
               </span>
             </div>
 
-            {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 leading-tight tracking-tight">
               Transform Cities Into
               <br />
               <span className="text-green-600">Green Havens</span>
             </h1>
 
-            {/* Description */}
             <p className="text-lg sm:text-xl text-gray-700 leading-relaxed max-w-xl">
               Upload satellite images and let AI instantly visualize green
               spaces. Analyze vegetation coverage and plan sustainable urban
               development in minutes.
             </p>
 
-            {/* Quick Benefits */}
             <div className="flex flex-wrap gap-3 sm:gap-4">
               {["Free Forever", "No Signup", "Results in 60s"].map(
                 (benefit) => (
@@ -64,7 +59,6 @@ const Hero = () => {
               )}
             </div>
 
-            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <Link
                 to="/upload"
@@ -83,7 +77,6 @@ const Hero = () => {
               </a>
             </div>
 
-            {/* Trust Line */}
             <p className="text-sm text-gray-600 flex items-center gap-2 pt-2">
               <Shield className="w-4 h-4 text-green-600 shrink-0" />
               Your images are processed securely and never stored
@@ -91,12 +84,10 @@ const Hero = () => {
           </div>
 
           {/* RIGHT: Visual Demo Dashboard */}
-          <div className="relative mt-8 lg:mt-0 max-w-xl mx-auto lg:max-w-none w-full">
-            {/* Main Card */}
+          {/* Added 'group' class to parent wrapper for responsive badge triggers */}
+          <div className="group relative mt-8 lg:mt-0 max-w-xl mx-auto lg:max-w-none w-full">
             <div className="relative bg-white rounded-3xl shadow-2xl p-6 sm:p-8 transform hover:scale-[1.02] transition-all duration-500 border border-gray-100">
-              {/* Before/After Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                {/* Before */}
                 <div className="group">
                   <div className="bg-gray-100 rounded-xl p-4 h-40 flex flex-col items-center justify-center border-2 border-gray-200 transition-all group-hover:border-gray-400 group-hover:shadow-lg">
                     <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mb-2">
@@ -108,7 +99,6 @@ const Hero = () => {
                   </div>
                 </div>
 
-                {/* After */}
                 <div className="group">
                   <div className="bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl p-4 h-40 flex flex-col items-center justify-center border-2 border-green-300 transition-all group-hover:border-green-500 group-hover:shadow-lg">
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-2 animate-pulse">
@@ -121,7 +111,6 @@ const Hero = () => {
                 </div>
               </div>
 
-              {/* Green Score Display */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 p-5 rounded-xl">
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
@@ -145,7 +134,6 @@ const Hero = () => {
                 </p>
               </div>
 
-              {/* Feature Icons */}
               <div className="grid grid-cols-3 gap-3 mt-6">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <Shield className="w-6 h-6 text-blue-600 mx-auto mb-1" />
@@ -166,8 +154,8 @@ const Hero = () => {
               </div>
             </div>
 
-            {/* Floating Badges */}
-            <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full font-black shadow-2xl animate-bounce border-4 border-white text-xs sm:text-sm select-none">
+            {/* Fixed: Badge lifts up super smooth when the dashboard card is hovered */}
+            <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full font-black shadow-2xl border-4 border-white text-xs sm:text-sm select-none transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-3">
               ✨ 100% FREE
             </div>
 
