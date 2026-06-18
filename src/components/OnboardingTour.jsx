@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"; // 🔧 FIX: added useRef to guard one-time navigation
+import { useState } from "react"; // 🔧 FIXED: Removed useEffect and useRef entirely
 import Joyride, { STATUS } from "react-joyride";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -6,27 +6,6 @@ const OnboardingTour = ({ run, onFinish }) => {
   const [stepIndex, setStepIndex] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
-  const hasRedirected = useRef(false); // 🔧 FIX: track whether we've already redirected for this tour run
-
-  // 🔧 FIX: Original effect re-ran on every location change while `run`
-  // was true, repeatedly calling navigate("/upload") — forcing the user
-  // back to /upload any time they navigated elsewhere (e.g. /gallery)
-  // during the tour, and re-triggering on every location update.
-  // Now it only redirects once, right when the tour starts.
-  useEffect(() => {
-    if (run && !hasRedirected.current) {
-      hasRedirected.current = true;
-      if (location.pathname !== "/upload") {
-        navigate("/upload");
-      }
-    }
-
-    // Reset the guard once the tour stops, so it can redirect again
-    // next time the tour is started.
-    if (!run) {
-      hasRedirected.current = false;
-    }
-  }, [run, location, navigate]);
 
   const steps = [
     {
@@ -147,6 +126,13 @@ const OnboardingTour = ({ run, onFinish }) => {
 
   const handleJoyrideCallback = (data) => {
     const { status, action, index, type } = data;
+
+    // 🔧 FIXED: Handle redirection directly inside the event handler when the tour triggers
+    if (type === "tour:start") {
+      if (location.pathname !== "/upload") {
+        navigate("/upload");
+      }
+    }
 
     // Handle all completion scenarios
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
