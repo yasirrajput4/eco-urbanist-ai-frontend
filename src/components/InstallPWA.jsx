@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // 🔧 Fixed: Added useRef
 import { Download, X, Smartphone, Zap, Wifi } from "lucide-react";
 
 const InstallPWA = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  // 🔧 Fixed: Used useRef instead of useState for deferredPrompt to prevent extra re-renders
+  const deferredPromptRef = useRef(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   useEffect(() => {
@@ -16,13 +17,15 @@ const InstallPWA = () => {
       return;
     }
 
+    let timerId; // 🔧 Added timer cleanup variable just in case
+
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      deferredPromptRef.current = e; // 🔧 Fixed: Assigned to ref instead of state
 
       // Show custom prompt after 3 seconds
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         setShowInstallPrompt(true);
       }, 3000);
     };
@@ -34,22 +37,24 @@ const InstallPWA = () => {
         "beforeinstallprompt",
         handleBeforeInstallPrompt,
       );
+      if (timerId) clearTimeout(timerId); // Cleanup timer if component unmounts early
     };
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) {
+    // 🔧 Fixed: Reading from ref.current
+    if (!deferredPromptRef.current) {
       return;
     }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    deferredPromptRef.current.prompt();
+    const { outcome } = await deferredPromptRef.current.userChoice;
 
     if (outcome === "accepted") {
       console.log("PWA installed");
     }
 
-    setDeferredPrompt(null);
+    deferredPromptRef.current = null; // 🔧 Fixed: Clear ref
     setShowInstallPrompt(false);
   };
 
@@ -66,9 +71,12 @@ const InstallPWA = () => {
     <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-96 z-50 animate-slideUp">
       <div className="bg-white rounded-2xl shadow-2xl border-2 border-green-500 p-6 relative">
         {/* Close Button */}
+        {/* 🔧 Fixed: Added type="button" and aria-label for better accessibility */}
         <button
+          type="button"
           onClick={handleDismiss}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close installation prompt"
         >
           <X className="w-5 h-5" />
         </button>
@@ -104,13 +112,17 @@ const InstallPWA = () => {
 
         {/* Buttons */}
         <div className="grid grid-cols-2 gap-3">
+          {/* 🔧 Fixed: Added type="button" */}
           <button
+            type="button"
             onClick={handleDismiss}
             className="px-4 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-all"
           >
             Maybe Later
           </button>
+          {/* 🔧 Fixed: Added type="button" */}
           <button
+            type="button"
             onClick={handleInstall}
             className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
           >
