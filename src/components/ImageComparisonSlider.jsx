@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"; // 🔧 FIXED: No useEffect, clean global tracking
+import { useState, useRef } from "react";
 import { MoveHorizontal } from "lucide-react";
 
 const ImageComparisonSlider = ({
@@ -21,7 +21,7 @@ const ImageComparisonSlider = ({
     setSliderPosition(Math.min(Math.max(percentage, 0), 100));
   };
 
-  // 🔧 FIXED: Track mouse movements globally on the window during an active drag
+  // Track mouse movements globally on the window during an active drag
   const handleMouseDown = (e) => {
     setIsDragging(true);
 
@@ -39,7 +39,7 @@ const ImageComparisonSlider = ({
     window.addEventListener("mouseup", handleGlobalMouseUp);
   };
 
-  // 🔧 FIXED: Track touch movements globally on the window during an active drag
+  // Track touch movements globally on the window during an active drag
   const handleTouchStart = (e) => {
     setIsDragging(true);
 
@@ -56,10 +56,14 @@ const ImageComparisonSlider = ({
     window.addEventListener("touchmove", handleGlobalTouchMove, {
       passive: true,
     });
-    window.addEventListener("touchend", handleGlobalTouchEnd);
+
+    // 🔧 FIXED: Added { passive: true } to eliminate touch scrolling jank and clear the linter warning
+    window.addEventListener("touchend", handleGlobalTouchEnd, {
+      passive: true,
+    });
   };
 
-  // 🔧 FIXED: Complete keyboard accessibility for slider role
+  // Complete keyboard accessibility for slider role
   const handleKeyDown = (e) => {
     if (e.key === "ArrowLeft") {
       setSliderPosition((prev) => Math.max(prev - 5, 0));
@@ -82,7 +86,6 @@ const ImageComparisonSlider = ({
         </p>
       </div>
 
-      {/* 🔧 LINE 47 FIXED: No interaction listeners here = no linter warnings */}
       <div
         ref={containerRef}
         className="relative w-full select-none overflow-hidden rounded-2xl shadow-2xl border-4 border-green-200 hover:border-green-400 transition-all cursor-ew-resize"
@@ -128,7 +131,7 @@ const ImageComparisonSlider = ({
           <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white"></div>
         </div>
 
-        {/* 🔧 LINE 98 FIXED: Swapped 'div' to semantic focusable 'button' with ARIA tags */}
+        {/* Slider Handle Button */}
         <button
           type="button"
           className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 focus:outline-none focus-visible:ring-4 focus-visible:ring-green-500 rounded-full z-10"

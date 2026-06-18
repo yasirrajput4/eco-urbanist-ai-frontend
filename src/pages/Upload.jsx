@@ -322,12 +322,14 @@ const Upload = () => {
                   or click the button below to browse
                 </p>
 
+                {/* 🔧 FIXED: Added explicit aria-label to hidden file input control */}
                 <input
                   type="file"
                   id="fileInput"
                   style={{ display: "none" }}
                   accept="image/png,image/jpeg,image/jpg"
                   onChange={handleFileChange}
+                  aria-label="Upload satellite image file"
                 />
 
                 <button
@@ -357,14 +359,18 @@ const Upload = () => {
                     Image Ready
                   </h3>
                 </div>
+                {/* 🔧 FIXED: Injected an explicit text node using an .sr-only span to completely clear the linter warning */}
                 <button
                   type="button"
                   onClick={handleRemoveFile}
-                  aria-label="Remove selected image"
                   className="p-3 hover:bg-red-50 rounded-xl transition-all duration-300 group"
                   disabled={isProcessing}
                 >
-                  <X className="w-6 h-6 text-gray-600 group-hover:text-red-600" />
+                  <span className="sr-only">Remove selected image</span>
+                  <X
+                    className="w-6 h-6 text-gray-600 group-hover:text-red-600"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
 
