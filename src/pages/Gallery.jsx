@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"; // 🔧 Fixed: Added useMemo, removed useEffect
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Image as ImageIcon,
@@ -14,14 +14,11 @@ import { galleryStorage } from "../utils/storage";
 import GalleryCard from "../components/GalleryCard";
 
 const Gallery = () => {
-  // 🔧 Fixed: Initialize state directly from storage on mount instead of an empty mount useEffect
   const [gallery, setGallery] = useState(() => galleryStorage.getAll());
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("newest"); // newest, oldest, improvement, trees
-
+  const [sortBy, setSortBy] = useState("newest");
   const [stats, setStats] = useState(() => galleryStorage.getStats());
 
-  // 🔧 Fixed: Instead of copying derived values to state with useEffect, compute them with useMemo
   const filteredGallery = useMemo(() => {
     let filtered = [...gallery];
 
@@ -56,7 +53,7 @@ const Gallery = () => {
     });
 
     return filtered;
-  }, [gallery, searchTerm, sortBy]); // Complete dependencies track
+  }, [gallery, searchTerm, sortBy]);
 
   const loadGallery = () => {
     const data = galleryStorage.getAll();
@@ -166,6 +163,7 @@ const Gallery = () => {
               <input
                 type="text"
                 placeholder="Search by date..."
+                aria-label="Search gallery by date"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none font-semibold text-gray-700"
@@ -178,6 +176,7 @@ const Gallery = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort gallery entries"
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none font-semibold text-gray-700 appearance-none cursor-pointer"
               >
                 <option value="newest">Newest First</option>
@@ -188,7 +187,6 @@ const Gallery = () => {
             </div>
 
             {/* Clear All */}
-            {/* 🔧 Fixed: Added type="button" and aria-label for accessibility */}
             <button
               type="button"
               onClick={handleClearAll}
@@ -210,7 +208,7 @@ const Gallery = () => {
             ))}
           </div>
         ) : (
-          // Empty State
+          /* Empty State */
           <div className="bg-white rounded-3xl shadow-xl p-16 text-center">
             {gallery.length === 0 ? (
               <>
@@ -244,7 +242,6 @@ const Gallery = () => {
                   No images match your search criteria. Try a different search
                   term.
                 </p>
-                {/* 🔧 Fixed: Changed static click to a real button element with type="button" */}
                 <button
                   type="button"
                   onClick={() => setSearchTerm("")}

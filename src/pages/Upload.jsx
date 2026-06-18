@@ -360,6 +360,7 @@ const Upload = () => {
                 <button
                   type="button"
                   onClick={handleRemoveFile}
+                  aria-label="Remove selected image"
                   className="p-3 hover:bg-red-50 rounded-xl transition-all duration-300 group"
                   disabled={isProcessing}
                 >
