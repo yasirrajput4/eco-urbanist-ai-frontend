@@ -18,12 +18,19 @@ function App() {
     // Check if user has seen the tour
     const hasSeenTour = localStorage.getItem("onboarding-tour-completed");
 
+    let timerId; // 🔧 Fixed: Timer id store karne ke liye variable
+
     if (!hasSeenTour) {
       // Show tour after 1 second on first visit
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         setRunTour(true);
       }, 1000);
     }
+
+    // 🔧 Fixed: Cleanup function return kiya taaki memory leak na ho
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
 
   const handleTourFinish = () => {
