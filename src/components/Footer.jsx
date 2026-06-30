@@ -358,7 +358,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://github.com/yasirrajput4/eco-urbanist-ai-frontend/images"
+                  href="https://github.com/yasirrajput4/eco-urbanist-ai-frontend/issues"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-center hover:text-green-400 transition-all font-semibold text-gray-400"
