@@ -1,6 +1,2 @@
 node_modules/
 dist/
-.env.production
-.vscode/
-.idea/
-.DS_Store
