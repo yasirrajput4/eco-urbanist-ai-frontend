@@ -71,6 +71,8 @@ const Navbar = () => {
           <button
             type="button"
             onClick={toggleMenu}
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isOpen}
             className="md:hidden p-3 rounded-xl hover:bg-gray-100 transition-all duration-300 transform active:scale-95"
           >
             {isOpen ? (
