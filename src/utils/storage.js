@@ -2,7 +2,8 @@
  * LocalStorage utility for gallery management
  */
 
-const GALLERY_KEY = "eco-urbanist-gallery";
+const STORAGE_VERSION = "v1";
+const GALLERY_KEY = `eco-urbanist-gallery:${STORAGE_VERSION}`;
 
 export const galleryStorage = {
   /**
@@ -20,16 +21,6 @@ export const galleryStorage = {
 
   /**
    * Add new item to gallery
-   * 🔧 FIX: gallery items embed base64 data URLs (the input image preview),
-   * which can be several MB each once base64-encoded. localStorage has a
-   * hard quota (typically ~5-10MB per origin), so JSON.stringify + setItem
-   * can throw QuotaExceededError. Previously this was silently swallowed
-   * and the caller (Results.jsx) showed "✅ Saved to gallery" even when
-   * nothing was actually persisted. Now:
-   *  - on quota errors, we try to free space by dropping the oldest
-   *    gallery items and retrying before giving up
-   *  - we return `null` on any failure so callers can detect it and avoid
-   *    showing a false "saved" confirmation
    */
   add: (item) => {
     try {
@@ -45,15 +36,12 @@ export const galleryStorage = {
         localStorage.setItem(GALLERY_KEY, JSON.stringify(gallery));
         return newItem;
       } catch (storageError) {
-        // 🔧 FIX: handle quota exceeded by trimming oldest entries and retrying
         if (
           storageError.name === "QuotaExceededError" ||
-          storageError.code === 22 // legacy browsers
+          storageError.code === 22
         ) {
           let trimmed = [...gallery];
 
-          // Try progressively removing the oldest items (largest images
-          // tend to accumulate over time) until it fits, or nothing is left.
           while (trimmed.length > 1) {
             trimmed = trimmed.slice(0, -1); // drop oldest
             try {
